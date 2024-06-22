@@ -21,8 +21,13 @@ app.use(helmet({
   },
 }));
 
-// Enable CORS for specified origin, methods, and headers
-app.use(cors());
+// Enable CORS for any origin
+app.use(cors({
+    origin: '*', // Allow all origins
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allow specific HTTP methods
+    allowedHeaders: ['Content-Type', 'Authorization'], // Allow specific headers
+  }));
+  
 
 // MongoDB connection
 const mongoURI = process.env.MONGO_URI || 'your-mongodb-connection-string';
