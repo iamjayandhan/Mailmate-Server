@@ -2,10 +2,10 @@ const express = require('express');
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
 const bodyParser = require('body-parser');
-require('dotenv').config();
-
+const multer = require('multer');
 const cors = require('cors');
 const helmet = require('helmet');
+require('dotenv').config();
 
 const app = express();
 app.use(bodyParser.json());
@@ -23,11 +23,10 @@ app.use(helmet({
 
 // Enable CORS for any origin
 app.use(cors({
-    origin: '*', // Allow all origins
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allow specific HTTP methods
-    allowedHeaders: ['Content-Type', 'Authorization'], // Allow specific headers
-  }));
-  
+  origin: '*', // Allow all origins
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allow specific HTTP methods
+  allowedHeaders: ['Content-Type', 'Authorization'], // Allow specific headers
+}));
 
 // MongoDB connection
 const mongoURI = process.env.MONGO_URI || 'your-mongodb-connection-string';
@@ -59,8 +58,12 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Multer configuration for handling file uploads
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage }).array('files', 10); // Accept up to 10 files
+
 // Endpoint to send emails and log to MongoDB
-app.post('/api/send-email', async (req, res) => {
+app.post('/api/send-email', upload, async (req, res) => {
   const { email, message } = req.body;
 
   // Save email log to MongoDB
@@ -73,11 +76,17 @@ app.post('/api/send-email', async (req, res) => {
     return res.status(500).send('Failed to log email to MongoDB');
   }
 
+  const attachments = req.files.map(file => ({
+    filename: file.originalname,
+    content: file.buffer
+  }));
+
   const mailOptions = {
     from: process.env.EMAIL,
     to: email,
     subject: 'New Message from Custom Emailing Portal',
     text: message,
+    attachments: attachments
   };
 
   transporter.sendMail(mailOptions, (error, info) => {
